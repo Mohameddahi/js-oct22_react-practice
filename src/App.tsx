@@ -1,9 +1,34 @@
 import React from 'react';
 import './App.scss';
+// import cn from 'classnames';
 
-// import usersFromServer from './api/users';
-// import productsFromServer from './api/products';
-// import categoriesFromServer from './api/categories';
+import usersFromServer from './api/users';
+import { User } from './Types/users';
+import productsFromServer from './api/products';
+import categoriesFromServer from './api/categories';
+import { Category } from './Types/categories';
+import { Product } from './Types/products';
+
+const getUser = (ownerId: number): User | null => {
+  const foundUser = usersFromServer.find(user => user.id === ownerId);
+
+  return foundUser || null;
+};
+
+const getCategory = (categoryId: number): Category | null => {
+  const foundCategory = categoriesFromServer
+    .find(category => category.id === categoryId);
+
+  return foundCategory || null;
+};
+
+export const products: Product[] = productsFromServer.map(product => ({
+  ...product,
+  category: getCategory(product.categoryId),
+  user: getUser(2),
+}));
+
+console.log(products);
 
 export const App: React.FC = () => {
   return (
@@ -187,6 +212,29 @@ export const App: React.FC = () => {
             </thead>
 
             <tbody>
+              {products.map(product => (
+                <tr
+                  key={product.id}
+                >
+                  <td>
+                    {product.id}
+                  </td>
+                  <td>
+                    {product.name}
+                  </td>
+                  <td>
+                    {product.category?.icon}
+                    {' '}
+                    {product.category?.title}
+                  </td>
+
+                  <td>
+                    {product.user?.name}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+            {/* <tbody>
               <tr data-cy="Product">
                 <td className="has-text-weight-bold" data-cy="ProductId">
                   1
@@ -234,7 +282,7 @@ export const App: React.FC = () => {
                   Roma
                 </td>
               </tr>
-            </tbody>
+            </tbody> */}
           </table>
         </div>
       </div>
