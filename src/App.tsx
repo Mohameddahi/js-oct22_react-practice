@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import './App.scss';
 import 'bulma/css/bulma.css';
 import cn from 'classnames';
@@ -7,8 +7,8 @@ import usersFromServer from './api/users';
 import { User } from './Types/users';
 import productsFromServer from './api/products';
 import categoriesFromServer from './api/categories';
-// import { Category } from './Types/categories';
-// import { Product } from './Types/products';
+import { Category } from './Types/categories';
+import { Product } from './Types/products';
 
 const getUser = (ownerId: number): User | null => {
   const foundUser = usersFromServer.find(user => user.id === ownerId);
@@ -16,42 +16,61 @@ const getUser = (ownerId: number): User | null => {
   return foundUser || null;
 };
 
-// const getCategory = (categoryId: number): Category | null => {
-//   const foundCategory = categoriesFromServer
-//     .find(category => category.id === categoryId);
+const getCategory = (categoryId: number): Category | null => {
+  const foundCategory = categoriesFromServer
+    .find(category => category.id === categoryId);
 
-//   return foundCategory || null;
-// };
+  return foundCategory || null;
+};
 
-const categoriesWithUsers = categoriesFromServer.map(category => {
-  const user = getUser(category.ownerId);
+export const products: Product[] = productsFromServer.map(product => {
+  const category = getCategory(product.categoryId);
+  const user = getUser(category?.ownerId || 0);
 
-  return {
-    id: category.id,
-    title: category.title,
-    icon: category.icon,
-    user,
-  };
+  return { ...product, category, user };
 });
-
-const productsWithCategoriesAndUsers = productsFromServer.map(product => {
-  const category = categoriesWithUsers
-    .find(category1 => category1.id === product.categoryId);
-
-  return {
-    id: product.id,
-    name: product.name,
-    user: category ? category.user : null,
-    category: category || null,
-  };
-});
-// export const products: Product[] = productsFromServer.map(product => ({
-//   ...product,
-//   category: getCategory(product.categoryId),
-//   user: getUser(2),
-// }));
 
 export const App: React.FC = () => {
+  const [selectedUserId, setSelectedUserId] = useState(0);
+  const [query, setQuery] = useState('');
+  const [selectedcategoryIds, setSelectedCategoryIds] = useState<number[]>([]);
+
+  const isCategorySelected = (categoryId: number) => {
+    return selectedcategoryIds.includes(categoryId);
+  };
+
+  const toggleSelectedCategory = (categoryId: number) => {
+    if (isCategorySelected(categoryId)) {
+      setSelectedCategoryIds(current => current.filter(
+        id => id !== categoryId,
+      ));
+    } else {
+      setSelectedCategoryIds(current => [...current, categoryId]);
+    }
+  };
+
+  let visibleProducts = [...products];
+
+  if (selectedUserId) {
+    visibleProducts = visibleProducts.filter(
+      product => product.user?.id === selectedUserId,
+    );
+  }
+
+  if (query) {
+    const lowerQuery = query.toLowerCase();
+
+    visibleProducts = visibleProducts.filter(
+      product => product.name.toLowerCase().includes(lowerQuery),
+    );
+  }
+
+  if (selectedcategoryIds.length > 0) {
+    visibleProducts = visibleProducts.filter(
+      product => selectedcategoryIds.includes(product.categoryId),
+    );
+  }
+
   return (
     <div className="section">
       <div className="container">
@@ -65,31 +84,30 @@ export const App: React.FC = () => {
               <a
                 data-cy="FilterAllUsers"
                 href="#/"
+                className={cn({
+                  'is-active': selectedUserId === 0,
+                })}
+                onClick={() => {
+                  setSelectedUserId(0);
+                }}
               >
                 All
               </a>
 
-              <a
-                data-cy="FilterUser"
-                href="#/"
-              >
-                User 1
-              </a>
-
-              <a
-                data-cy="FilterUser"
-                href="#/"
-                className="is-active"
-              >
-                User 2
-              </a>
-
-              <a
-                data-cy="FilterUser"
-                href="#/"
-              >
-                User 3
-              </a>
+              {usersFromServer.map(user => (
+                <a
+                  data-cy="FilterUser"
+                  href="#/"
+                  className={cn({
+                    'is-active': selectedUserId === user.id,
+                  })}
+                  onClick={() => {
+                    setSelectedUserId(user.id);
+                  }}
+                >
+                  {user.name}
+                </a>
+              ))}
             </p>
 
             <div className="panel-block">
@@ -99,7 +117,10 @@ export const App: React.FC = () => {
                   type="text"
                   className="input"
                   placeholder="Search"
-                  value="qwe"
+                  value={query}
+                  onChange={(event) => {
+                    setQuery(event.target.value);
+                  }}
                 />
 
                 <span className="icon is-left">
@@ -107,12 +128,20 @@ export const App: React.FC = () => {
                 </span>
 
                 <span className="icon is-right">
-                  {/* eslint-disable-next-line jsx-a11y/control-has-associated-label */}
-                  <button
-                    data-cy="ClearButton"
-                    type="button"
-                    className="delete"
-                  />
+                  { query
+                    && (
+                      <>
+                        {/* eslint-disable-next-line jsx-a11y/control-has-associated-label */}
+                        <button
+                          data-cy="ClearButton"
+                          type="button"
+                          className="delete"
+                          onClick={() => {
+                            setQuery('');
+                          }}
+                        />
+                      </>
+                    )}
                 </span>
               </p>
             </div>
@@ -121,41 +150,31 @@ export const App: React.FC = () => {
               <a
                 href="#/"
                 data-cy="AllCategories"
-                className="button is-success mr-6 is-outlined"
+                className={cn('button is-success mr-6', {
+                  'is-outlined': selectedcategoryIds.length !== 0,
+                })}
+                onClick={() => {
+                  setSelectedCategoryIds([]);
+                }}
               >
                 All
               </a>
 
-              <a
-                data-cy="Category"
-                className="button mr-2 my-1 is-info"
-                href="#/"
-              >
-                Category 1
-              </a>
-
-              <a
-                data-cy="Category"
-                className="button mr-2 my-1"
-                href="#/"
-              >
-                Category 2
-              </a>
-
-              <a
-                data-cy="Category"
-                className="button mr-2 my-1 is-info"
-                href="#/"
-              >
-                Category 3
-              </a>
-              <a
-                data-cy="Category"
-                className="button mr-2 my-1"
-                href="#/"
-              >
-                Category 4
-              </a>
+              {categoriesFromServer.map(category => (
+                <a
+                  key={category.id}
+                  data-cy="Category"
+                  className={cn('button mr-2 my-1', {
+                    'is-info': isCategorySelected(category.id),
+                  })}
+                  onClick={() => {
+                    toggleSelectedCategory(category.id);
+                  }}
+                  href="#/"
+                >
+                  {category.title}
+                </a>
+              ))}
             </div>
 
             <div className="panel-block">
@@ -163,6 +182,10 @@ export const App: React.FC = () => {
                 data-cy="ResetAllButton"
                 href="#/"
                 className="button is-link is-outlined is-fullwidth"
+                onClick={() => {
+                  setSelectedCategoryIds([]);
+                  setSelectedUserId(0);
+                }}
 
               >
                 Reset all filters
@@ -172,95 +195,91 @@ export const App: React.FC = () => {
         </div>
 
         <div className="box table-container">
-          <p data-cy="NoMatchingMessage">
-            No products matching selected criteria
-          </p>
+          {visibleProducts.length === 0 ? (
+            <p data-cy="NoMatchingMessage">
+              No products matching selected criteria
+            </p>
+          ) : (
+            <table
+              data-cy="ProductTable"
+              className="table is-striped is-narrow is-fullwidth"
+            >
+              <thead>
+                <tr>
+                  <th>
+                    <span className="is-flex is-flex-wrap-nowrap">
+                      ID
 
-          <table
-            data-cy="ProductTable"
-            className="table is-striped is-narrow is-fullwidth"
-          >
-            <thead>
-              <tr>
-                <th>
-                  <span className="is-flex is-flex-wrap-nowrap">
-                    ID
+                      <a href="#/">
+                        <span className="icon">
+                          <i data-cy="SortIcon" className="fas fa-sort" />
+                        </span>
+                      </a>
+                    </span>
+                  </th>
 
-                    <a href="#/">
-                      <span className="icon">
-                        <i data-cy="SortIcon" className="fas fa-sort" />
-                      </span>
-                    </a>
-                  </span>
-                </th>
+                  <th>
+                    <span className="is-flex is-flex-wrap-nowrap">
+                      Product
 
-                <th>
-                  <span className="is-flex is-flex-wrap-nowrap">
-                    Product
+                      <a href="#/">
+                        <span className="icon">
+                          <i data-cy="SortIcon" className="fas fa-sort-down" />
+                        </span>
+                      </a>
+                    </span>
+                  </th>
 
-                    <a href="#/">
-                      <span className="icon">
-                        <i data-cy="SortIcon" className="fas fa-sort-down" />
-                      </span>
-                    </a>
-                  </span>
-                </th>
+                  <th>
+                    <span className="is-flex is-flex-wrap-nowrap">
+                      Category
 
-                <th>
-                  <span className="is-flex is-flex-wrap-nowrap">
-                    Category
+                      <a href="#/">
+                        <span className="icon">
+                          <i data-cy="SortIcon" className="fas fa-sort-up" />
+                        </span>
+                      </a>
+                    </span>
+                  </th>
 
-                    <a href="#/">
-                      <span className="icon">
-                        <i data-cy="SortIcon" className="fas fa-sort-up" />
-                      </span>
-                    </a>
-                  </span>
-                </th>
+                  <th>
+                    <span className="is-flex is-flex-wrap-nowrap">
+                      User
 
-                <th>
-                  <span className="is-flex is-flex-wrap-nowrap">
-                    User
-
-                    <a href="#/">
-                      <span className="icon">
-                        <i data-cy="SortIcon" className="fas fa-sort" />
-                      </span>
-                    </a>
-                  </span>
-                </th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {productsWithCategoriesAndUsers.map(product => (
-                <tr
-                  key={product.id}
-                >
-                  <td>
-                    {product.id}
-                  </td>
-                  <td>
-                    {product.name}
-                  </td>
-                  <td>
-                    {product.category?.icon}
-                    {' - '}
-                    {product.category?.title}
-                  </td>
-
-                  <td
-                    className={cn({
-                      'has-text-link': product.user?.sex === 'm',
-                      'has-text-danger': product.user?.sex === 'f',
-                    })}
-                  >
-                    {product.user?.name}
-                  </td>
+                      <a href="#/">
+                        <span className="icon">
+                          <i data-cy="SortIcon" className="fas fa-sort" />
+                        </span>
+                      </a>
+                    </span>
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+
+              <tbody>
+                {visibleProducts.map(product => (
+                  <tr data-cy="Product">
+                    <td className="has-text-weight-bold" data-cy="ProductId">
+                      {product.id}
+                    </td>
+                    <td data-cy="ProductName">{product.name}</td>
+                    <td data-cy="ProductCategory">
+                      {`${product.category?.icon} - ${product.category?.title}`}
+                    </td>
+                    <td
+                      data-cy="ProductUser"
+                      className={cn({
+                        'has-text-link': product.user?.sex === 'm',
+                        'has-text-danger': product.user?.sex === 'f',
+                      })}
+                    >
+                      {product.user?.name}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
     </div>
