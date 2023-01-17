@@ -1,6 +1,7 @@
 import React from 'react';
 import './App.scss';
-// import cn from 'classnames';
+import 'bulma/css/bulma.css';
+import cn from 'classnames';
 
 import usersFromServer from './api/users';
 import { User } from './Types/users';
@@ -27,8 +28,6 @@ export const products: Product[] = productsFromServer.map(product => ({
   category: getCategory(product.categoryId),
   user: getUser(2),
 }));
-
-console.log(products);
 
 export const App: React.FC = () => {
   return (
@@ -228,7 +227,12 @@ export const App: React.FC = () => {
                     {product.category?.title}
                   </td>
 
-                  <td>
+                  <td
+                    className={cn({
+                      'has-text-link': product.user?.sex === 'm',
+                      'has-text-danger': product.user?.sex === 'f',
+                    })}
+                  >
                     {product.user?.name}
                   </td>
                 </tr>
