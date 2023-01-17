@@ -7,8 +7,8 @@ import usersFromServer from './api/users';
 import { User } from './Types/users';
 import productsFromServer from './api/products';
 import categoriesFromServer from './api/categories';
-import { Category } from './Types/categories';
-import { Product } from './Types/products';
+// import { Category } from './Types/categories';
+// import { Product } from './Types/products';
 
 const getUser = (ownerId: number): User | null => {
   const foundUser = usersFromServer.find(user => user.id === ownerId);
@@ -16,18 +16,40 @@ const getUser = (ownerId: number): User | null => {
   return foundUser || null;
 };
 
-const getCategory = (categoryId: number): Category | null => {
-  const foundCategory = categoriesFromServer
-    .find(category => category.id === categoryId);
+// const getCategory = (categoryId: number): Category | null => {
+//   const foundCategory = categoriesFromServer
+//     .find(category => category.id === categoryId);
 
-  return foundCategory || null;
-};
+//   return foundCategory || null;
+// };
 
-export const products: Product[] = productsFromServer.map(product => ({
-  ...product,
-  category: getCategory(product.categoryId),
-  user: getUser(2),
-}));
+const categoriesWithUsers = categoriesFromServer.map(category => {
+  const user = getUser(category.ownerId);
+
+  return {
+    id: category.id,
+    title: category.title,
+    icon: category.icon,
+    user,
+  };
+});
+
+const productsWithCategoriesAndUsers = productsFromServer.map(product => {
+  const category = categoriesWithUsers
+    .find(category1 => category1.id === product.categoryId);
+
+  return {
+    id: product.id,
+    name: product.name,
+    user: category ? category.user : null,
+    category: category || null,
+  };
+});
+// export const products: Product[] = productsFromServer.map(product => ({
+//   ...product,
+//   category: getCategory(product.categoryId),
+//   user: getUser(2),
+// }));
 
 export const App: React.FC = () => {
   return (
@@ -211,7 +233,7 @@ export const App: React.FC = () => {
             </thead>
 
             <tbody>
-              {products.map(product => (
+              {productsWithCategoriesAndUsers.map(product => (
                 <tr
                   key={product.id}
                 >
