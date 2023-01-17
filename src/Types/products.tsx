@@ -5,6 +5,6 @@ export interface Product {
   id: number,
   name: string,
   categoryId: number,
-  category: Category[] | null,
-  user: User[] | null,
+  category: Category | null,
+  user: User | null,
 }
