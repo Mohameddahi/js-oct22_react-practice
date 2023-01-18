@@ -186,7 +186,6 @@ export const App: React.FC = () => {
                   setSelectedCategoryIds([]);
                   setSelectedUserId(0);
                 }}
-
               >
                 Reset all filters
               </a>
